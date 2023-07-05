@@ -1,7 +1,9 @@
 const int trigPin = 9;
 const int echoPin = 10;
-const int pump1Pin = 0;
-const int pump2Pin = 1;
+const int pump1Pin = 0;//Pump moving water into tank
+const int pump2Pin = 1;// Pump moving water away from tank
+int desiredReading = 0;
+float offset = 0.1; // Lower and upper bounds
 
 void setup() {
   Serial.begin(9600);
@@ -34,23 +36,40 @@ float measureDistance() {
 
 void loop() {
   if (Serial.available()) {
-    char input = Serial.read();
+    int userInput = Serial.parseInt();
+    if (Serial.read() == '\n') {
+      desiredReading = userInput;
+      Serial.print("Desired reading is now: ");
+      Serial.println(desiredReading);
+    }
+  }
 
+  if (Serial.available()) {
+    char input = Serial.read();
     if (input == 'd') {
       while (true) {
         float distance = measureDistance();
         delay(500);
 
-        if (distance > 40) {
-          digitalWrite(pump1Pin, LOW); // Turn pump1Pin on
-          digitalWrite(pump2Pin, HIGH); // Turn pump2Pin off
-        } else if (distance < 40) {
-          digitalWrite(pump1Pin, HIGH); // Turn pump1Pin off
-          digitalWrite(pump2Pin, LOW); // Turn pump2Pin on
-        } else {
-          digitalWrite(pump1Pin, HIGH); // Turn pump1Pin off
-          digitalWrite(pump2Pin, HIGH); // Turn pump2Pin off
+        if (distance >= desiredReading - offset && distance <= desiredReading + offset) {
+          digitalWrite(pump1Pin, HIGH); // Turn off pump1
+          digitalWrite(pump2Pin, HIGH); // Turn off pump2
           break;
+        } else if (distance > desiredReading + offset) {
+          digitalWrite(pump1Pin, LOW); // Turn on pump1
+          digitalWrite(pump2Pin, HIGH); // Turn off pump2
+        } else if (distance < desiredReading - offset) {
+          digitalWrite(pump1Pin, HIGH); // Turn off pump1
+          digitalWrite(pump2Pin, LOW); // Turn on pump2
+        }
+
+        if (Serial.available()) {
+          input = Serial.read();
+          if (input == 'q') {
+            digitalWrite(pump1Pin, HIGH); // Turn off pump1
+            digitalWrite(pump2Pin, HIGH); // Turn off pump2
+            break; // Exit the loop
+          }
         }
       }
     }
