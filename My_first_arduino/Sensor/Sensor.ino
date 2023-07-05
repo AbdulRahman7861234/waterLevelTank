@@ -2,7 +2,7 @@ const int trigPin = 9;
 const int echoPin = 10;
 const int pump1Pin = 0;
 const int pump2Pin = 1;
-int desiredReading = 50;
+
 void setup() {
   Serial.begin(9600);
   pinMode(trigPin, OUTPUT);
@@ -36,15 +36,15 @@ void loop() {
   if (Serial.available()) {
     char input = Serial.read();
 
-    if (input == (desiredReading)) {
+    if (input == 'd') {
       while (true) {
         float distance = measureDistance();
         delay(500);
 
-        if (distance > desiredReading) {
+        if (distance > 40) {
           digitalWrite(pump1Pin, LOW); // Turn pump1Pin on
           digitalWrite(pump2Pin, HIGH); // Turn pump2Pin off
-        } else if (distance < desiredReading) {
+        } else if (distance < 40) {
           digitalWrite(pump1Pin, HIGH); // Turn pump1Pin off
           digitalWrite(pump2Pin, LOW); // Turn pump2Pin on
         } else {
