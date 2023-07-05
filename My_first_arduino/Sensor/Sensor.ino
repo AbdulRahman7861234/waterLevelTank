@@ -46,7 +46,7 @@ void loop() {
 
   if (Serial.available()) {
     char input = Serial.read();
-    if (input == 'd') {
+    if (input == 'on') {
       while (true) {
         float distance = measureDistance();
         delay(500);
