@@ -1,77 +1,113 @@
-const int trigPin = 9;
-const int echoPin = 10;
-const int pump1Pin = 0;//Pump moving water into tank
-const int pump2Pin = 1;// Pump moving water away from tank
-int desiredReading = 0;
+#define ON true
+#define OFF false
+
+typedef struct WaterLevel_t {
+  bool pumpOff;
+  int pumpTimer;
+  float ultrasonicLevel;
+  bool ultrasonicTrigTimer;
+  int ultrasonicEchoPin;
+} WaterLevel_t;
+
+typedef enum WaterLevelTankStates_t {
+  IDLE,
+  PUMPING_EMPTY,
+  PUMPING_FILL,
+  //LIDOTT_MEASURE,
+} WaterLevelTankStates_t;
+
+WaterLevelTankStates_t state = IDLE;
+WaterLevelTankStates_t lastState = IDLE;
+bool newState = true;
+
+WaterLevel_t waterLevelTank;
+
+int desiredReading = 30;
 float offset = 0.1; // Lower and upper bounds
 
 void setup() {
   Serial.begin(9600);
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-  pinMode(pump1Pin, OUTPUT);
-  pinMode(pump2Pin, OUTPUT);
-  digitalWrite(pump1Pin, HIGH);
-  digitalWrite(pump2Pin, HIGH);
-}
+  
+  init_ultrasonics();
+  init_pumps();
 
-float measureDistance() {
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-
-  long duration = pulseIn(echoPin, HIGH);
-  float distance = duration * 0.034 / 2;
-
-  Serial.print("Distance: ");
-  Serial.print(distance);
-  Serial.println(" cm");
-
-  delay(500);
-
-  return distance;
+  Serial.println("Init complete.");
 }
 
 void loop() {
-  if (Serial.available()) {
-    int userInput = Serial.parseInt();
-    if (Serial.read() == '\n') {
-      desiredReading = userInput;
-      Serial.print("Desired reading is now: ");
-      Serial.println(desiredReading);
-    }
+
+  delay(500);
+
+  static char temp[100] = {0};
+  sprintf(temp, "state: %d, laststate: %d", state, lastState);
+  Serial.println(temp);
+
+  if (state != lastState) {
+    newState = true;
+    lastState = state;
   }
 
-  if (Serial.available()) {
-    char input = Serial.read();
-    if (input == 'on') {
-      while (true) {
-        float distance = measureDistance();
-        delay(500);
+  switch (state) {
+    case IDLE:
+      if (newState) {
+        Serial.println("IDLE");
+      }
 
-        if (distance >= desiredReading - offset && distance <= desiredReading + offset) {
-          digitalWrite(pump1Pin, HIGH); // Turn off pump1
-          digitalWrite(pump2Pin, HIGH); // Turn off pump2
-          break;
-        } else if (distance > desiredReading + offset) {
-          digitalWrite(pump1Pin, LOW); // Turn on pump1
-          digitalWrite(pump2Pin, HIGH); // Turn off pump2
-        } else if (distance < desiredReading - offset) {
-          digitalWrite(pump1Pin, HIGH); // Turn off pump1
-          digitalWrite(pump2Pin, LOW); // Turn on pump2
-        }
+      // Take an ultrasonic measurement
+      waterLevelTank.ultrasonicLevel = measureDistance();
 
-        if (Serial.available()) {
-          input = Serial.read();
-          if (input == 'q') {
-            digitalWrite(pump1Pin, HIGH); // Turn off pump1
-            digitalWrite(pump2Pin, HIGH); // Turn off pump2
-            break; // Exit the loop
-          }
+      sprintf(temp, "Ultrasonic level: %f", waterLevelTank.ultrasonicLevel);
+      Serial.println(temp);
+
+      // Determine if the tank needs to be emptied - Go to Pumping state if required
+      if (waterLevelTank.ultrasonicLevel > 20) {
+        state = PUMPING_EMPTY;
+      } else {
+        // Otherwise, take a Lidott measurement
+        state = PUMPING_FILL;
+      }
+      break;
+
+    case PUMPING_EMPTY:
+      if (newState) {
+        Serial.println("PUMPING_EMPTY");
+        pump_action(1, ON);
+      }
+
+      // Take an ultrasonic measurement
+      waterLevelTank.ultrasonicLevel = measureDistance();
+
+      // Determine if the tank needs to be emptied - Go to Pumping state if required
+      if (waterLevelTank.ultrasonicLevel < 20) {
+        pump_action(1, OFF);
+        state = IDLE;
+      }
+      break;
+
+    case PUMPING_FILL:
+      if (newState) {
+        Serial.println("PUMPING_FILL");
+        pump_action(2, ON);
+      }
+      
+      waterLevelTank.ultrasonicLevel = measureDistance();
+
+      // Determine if the tank needs to be filled
+      if (waterLevelTank.ultrasonicLevel < desiredReading) {
+        pump_action(2,ON);
+      } else {
+        // Tank reached or exceeded desired reading
+        pump_action(2, OFF);
+        desiredReading += 10;
+        delay(1000);
+        
+        if (desiredReading > 60) {
+          state = IDLE;
         }
       }
-    }
-  }
+      break;
+  };
+
+  newState = false;
 }
+
