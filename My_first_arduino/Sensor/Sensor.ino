@@ -23,7 +23,7 @@ bool newState = true;
 
 WaterLevel_t waterLevelTank;
 
-int desiredReading = 30;
+int desiredReading = 60;
 float offset = 0.1; // Lower and upper bounds
 
 void setup() {
@@ -102,7 +102,8 @@ void loop() {
         desiredReading += 10;
         state = DELAY;
         
-        if (desiredReading > 60) {
+        if (desiredReading > 70) {
+
           state = IDLE;
         }
       }
@@ -110,14 +111,12 @@ void loop() {
       if (newState){
         Serial.println("DELAY");
       } 
-      //Delay for 5 seconds 
-      delay(5000);
       //Go back to filling up tank
       state = PUMPING_FILL;
   };
 
+  delay(5000);
+
   newState = false;
 
-  delay(1);
 }
-
