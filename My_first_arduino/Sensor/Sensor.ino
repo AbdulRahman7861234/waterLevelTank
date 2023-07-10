@@ -13,6 +13,7 @@ typedef enum WaterLevelTankStates_t {
   IDLE,
   PUMPING_EMPTY,
   PUMPING_FILL,
+  DELAY,
   //LIDOTT_MEASURE,
 } WaterLevelTankStates_t;
 
@@ -60,7 +61,7 @@ void loop() {
       Serial.println(temp);
 
       // Determine if the tank needs to be emptied - Go to Pumping state if required
-      if (waterLevelTank.ultrasonicLevel > 20) {
+      if (waterLevelTank.ultrasonicLevel > 30) {
         state = PUMPING_EMPTY;
       } else {
         // Otherwise, take a Lidott measurement
@@ -78,7 +79,7 @@ void loop() {
       waterLevelTank.ultrasonicLevel = measureDistance();
 
       // Determine if the tank needs to be emptied - Go to Pumping state if required
-      if (waterLevelTank.ultrasonicLevel < 20) {
+      if (waterLevelTank.ultrasonicLevel < 30) {
         pump_action(1, OFF);
         state = IDLE;
       }
@@ -99,15 +100,24 @@ void loop() {
         // Tank reached or exceeded desired reading
         pump_action(2, OFF);
         desiredReading += 10;
-        delay(1000);
+        state = DELAY;
         
         if (desiredReading > 60) {
           state = IDLE;
         }
       }
-      break;
+    case DELAY:
+      if (newState){
+        Serial.println("DELAY");
+      } 
+      //Delay for 5 seconds 
+      delay(5000);
+      //Go back to filling up tank
+      state = PUMPING_FILL;
   };
 
   newState = false;
+
+  delay(1);
 }
 
