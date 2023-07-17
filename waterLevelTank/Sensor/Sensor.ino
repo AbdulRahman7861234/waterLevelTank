@@ -46,7 +46,6 @@ void setup() {
 }
 
 void loop() {
-  const int num_samples = 10;
 
   delay(500);
 
@@ -66,7 +65,7 @@ void loop() {
       }
 
       // Take an ultrasonic measurement
-      waterLevelTank.ultrasonicLevel = get_average_distance();
+      waterLevelTank.ultrasonicLevel = get_readings();
 
       sprintf(temp, "Ultrasonic level: %f", waterLevelTank.ultrasonicLevel);
       Serial.println(temp);
@@ -87,14 +86,14 @@ void loop() {
       }
 
       // Take an ultrasonic measurement
-      waterLevelTank.ultrasonicLevel = get_average_distance();
+      waterLevelTank.ultrasonicLevel = get_readings();
 
       // Determine if the tank needs to be emptied - Go to Pumping state if required
       if (waterLevelTank.ultrasonicLevel < 30) {
         pump_action(1, OFF);
         state = IDLE;
       } else {
-        setupTimer(PUMPING_EMPTY, 50); 
+      setupTimer(PUMPING_EMPTY, 5); 
       } 
 
 
@@ -106,13 +105,13 @@ void loop() {
         pump_action(2, ON);
       }
       
-      waterLevelTank.ultrasonicLevel = get_average_distance();
+      waterLevelTank.ultrasonicLevel = get_readings();
 
       // Determine if the tank needs to be filled
       if (waterLevelTank.ultrasonicLevel >= desiredReading){
         // Tank reached or exceeded desired reading
         pump_action(2, OFF);
-        if (desiredReading > 50) {
+        if (desiredReading > 100) {
           state = IDLE;
         } else {
           state = LIDOTT_MEASURE;
@@ -120,14 +119,14 @@ void loop() {
         }
 
       } else {
-        setupTimer(PUMPING_FILL, 50);
+        setupTimer(PUMPING_FILL, 5);
         }
       break;
 
     case DELAY:
       if (newState) {
         Serial.println("DELAY");
-      //  waterLevelTank.delayTimer = 0;
+        //waterLevelTank.delayTimer = 0;
       } 
       waterLevelTank.delayTimer -= 1;
 
