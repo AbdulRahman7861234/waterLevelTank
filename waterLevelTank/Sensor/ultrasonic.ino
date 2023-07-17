@@ -1,5 +1,5 @@
 const int trigPin = 9;
-const int echoPin = 10;
+const int echoPin = 11;
 const int bufferSize = 10;
 
 int buffer[bufferSize];
@@ -12,7 +12,7 @@ void Ultrasonic_pins() {
   pinMode(echoPin, INPUT);
 }
 
-void get_readings() {
+float get_readings() {
   float distance = measureDistance();
   put(distance);
   
@@ -20,6 +20,7 @@ void get_readings() {
     float average = get_average_distance();
     Serial.print("Average: ");
     Serial.println(average);
+    return average;
   }
   
   delay(100); // Delay for 1 second between measurements
